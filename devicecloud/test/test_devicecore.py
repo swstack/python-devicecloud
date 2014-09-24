@@ -10,6 +10,8 @@ import unittest
 
 from dateutil.tz import tzutc
 from devicecloud.test.test_utilities import HttpTestBase
+from devicecloud.devicecore import ADD_GROUP_TEMPLATE
+import httpretty
 
 
 EXAMPLE_GET_DEVICES = {
@@ -136,6 +138,24 @@ class TestDeviceCore(HttpTestBase):
         self.assertEqual(device.get_device_type(False), "Turboencabulator")
         self.assertEqual(device.get_device_type(), "Turboencabulator")  # make sure cache updated
 
+    def test_add_device_to_group(self):
+        self.prepare_json_response("GET", "/ws/DeviceCore", EXAMPLE_GET_DEVICES)
+        self.prepare_response("PUT", "/ws/DeviceCore", '')
+        dev = self.dc.devicecore.get_device("00:40:9D:58:17:5B")
+        dev.add_to_group('testgrp')
+        expected = ADD_GROUP_TEMPLATE.format(connectware_id=dev.get_connectware_id(),
+                                             group_path='testgrp')
+        self.assertEqual(expected, httpretty.httpretty.last_request.body)
+
+    def test_remove_device_from_group(self):
+        self.prepare_json_response("GET", "/ws/DeviceCore", EXAMPLE_GET_DEVICES)
+        self.prepare_response("PUT", "/ws/DeviceCore", '')
+        dev = self.dc.devicecore.get_device("00:40:9D:58:17:5B")
+        dev.get_group_path = lambda: 'something other than empty string'
+        dev.remove_from_group()
+        expected = ADD_GROUP_TEMPLATE.format(connectware_id=dev.get_connectware_id(),
+                                             group_path='')
+        self.assertEqual(expected, httpretty.httpretty.last_request.body)
 
 if __name__ == '__main__':
     unittest.main()
